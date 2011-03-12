@@ -26,6 +26,8 @@ Gem::Specification.new do |s|
   s.add_dependency "sinatra",         ">= 0.9.2"
   s.add_dependency "json",            "~> 1.4.6"
 
+  s.add_development_dependency "rack-test", "~> 0.5"
+
   s.description = <<description
     Resque is a Redis-backed Ruby library for creating background jobs,
     placing those jobs on multiple queues, and processing them later.
