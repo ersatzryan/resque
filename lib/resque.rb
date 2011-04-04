@@ -1,4 +1,3 @@
-require 'redis/namespace'
 
 begin
   require 'yajl'
@@ -9,6 +8,8 @@ end
 require 'resque/version'
 
 require 'resque/errors'
+
+require 'resque/data_store/base'
 
 require 'resque/failure'
 require 'resque/failure/base'
@@ -23,39 +24,17 @@ module Resque
   include Helpers
   extend self
 
-  # Accepts:
-  #   1. A 'hostname:port' string
-  #   2. A 'hostname:port:db' string (to select the Redis db)
-  #   3. A 'hostname:port/namespace' string (to set the Redis namespace)
-  #   4. A redis URL string 'redis://host:port'
-  #   5. An instance of `Redis`, `Redis::Client`, `Redis::DistRedis`,
-  #      or `Redis::Namespace`.
-  def redis=(server)
-    if server.respond_to? :split
-      if server =~ /redis\:\/\//
-        redis = Redis.connect(:url => server, :thread_safe => true)
-      else
-        server, namespace = server.split('/', 2)
-        host, port, db = server.split(':')
-        redis = Redis.new(:host => host, :port => port,
-          :thread_safe => true, :db => db)
-      end
-      namespace ||= :resque
-
-      @redis = Redis::Namespace.new(namespace, :redis => redis)
-    elsif server.respond_to? :namespace=
-        @redis = server
-    else
-      @redis = Redis::Namespace.new(:resque, :redis => server)
-    end
+  def data_store=(store)
+    @data_store = store
   end
 
-  # Returns the current Redis connection. If none has been created, will
-  # create a new one.
-  def redis
-    return @redis if @redis
-    self.redis = 'localhost:6379'
-    self.redis
+  def data_store
+    @data_store ||= default_data_store
+  end
+
+  def default_data_store
+    require 'resque/data_store/redis'
+    Resque::DataStore::Redis.new('localhost:6379')
   end
 
   def redis_id
@@ -126,21 +105,20 @@ module Resque
   # Pushes a job onto a queue. Queue name should be a string and the
   # item should be any JSON-able Ruby object.
   def push(queue, item)
-    watch_queue(queue)
-    redis.rpush "queue:#{queue}", encode(item)
+    data_store.push(queue, item)
   end
 
   # Pops a job off a queue. Queue name should be a string.
   #
   # Returns a Ruby object.
   def pop(queue)
-    decode redis.lpop("queue:#{queue}")
+    data_store.pop(queue)
   end
 
   # Returns an integer representing the size of a queue.
   # Queue name should be a string.
   def size(queue)
-    redis.llen("queue:#{queue}").to_i
+    data_store.size(queue)
   end
 
   # Returns an array of items currently queued. Queue name should be
@@ -158,31 +136,19 @@ module Resque
   # Does the dirty work of fetching a range of items from a Redis list
   # and converting them into Ruby objects.
   def list_range(key, start = 0, count = 1)
-    if count == 1
-      decode redis.lindex(key, start)
-    else
-      Array(redis.lrange(key, start, start+count-1)).map do |item|
-        decode item
-      end
-    end
+    data_store.list_range(key, start, count)
   end
 
   # Returns an array of all known Resque queues as strings.
   def queues
-    Array(redis.smembers(:queues))
+    Array(data_store.queues)
   end
 
   # Given a queue name, completely deletes the queue.
   def remove_queue(queue)
-    redis.srem(:queues, queue.to_s)
-    redis.del("queue:#{queue}")
+    data_store.remove_queue(queue)
   end
 
-  # Used internally to keep track of which queues we've created.
-  # Don't call this directly.
-  def watch_queue(queue)
-    redis.sadd(:queues, queue.to_s)
-  end
 
 
   #
@@ -293,11 +259,13 @@ module Resque
     }
   end
 
+  # TODO: Find where Resque.keys is actually used
+  #
   # Returns an array of all known Resque keys in Redis. Redis' KEYS operation
   # is O(N) for the keyspace, so be careful - this can be slow for big databases.
-  def keys
-    redis.keys("*").map do |key|
-      key.sub("#{redis.namespace}:", '')
-    end
-  end
+  # def keys
+  #   redis.keys("*").map do |key|
+  #     key.sub("#{redis.namespace}:", '')
+  #   end
+  # end
 end

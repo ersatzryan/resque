@@ -2,36 +2,31 @@ module Resque
   # Methods used by various classes in Resque.
   module Helpers
     # Direct access to the Redis instance.
-    def redis
-      Resque.redis
-    end
+    # def redis
+    #   Resque.redis
+    # end
 
-    # Given a Ruby object, returns a string suitable for storage in a
-    # queue.
-    def encode(object)
-      if defined? Yajl
-        Yajl::Encoder.encode(object)
-      else
-        object.to_json
-      end
-    end
+    # def delegate(*methods)
+    #   options = methods.pop
 
-    # Given a string, returns a Ruby object.
-    def decode(object)
-      return unless object
+    #   unless options.is_a?(Hash) && to = options[:to]
+    #     raise ArgumentError, "Delegation must be supplied a target. Supply an options hash as the last argument with :to key (e.g. delegate :name, :to => Person)"
+    #   end
 
-      if defined? Yajl
-        begin
-          Yajl::Parser.parse(object, :check_utf8 => false)
-        rescue Yajl::ParseError
-        end
-      else
-        begin
-          JSON.parse(object)
-        rescue JSON::ParserError
-        end
-      end
-    end
+    #   methods.each do |method|
+    #     # method_string = <<-EOS
+    #     #   def #{method}(*args, &block)
+    #     #     return nil unless #{to}.nil?
+    #     #     #{to}.__send__(#{method}, *args, &block)
+    #     #   end
+    #     #     EOS
+    #     # module_eval(method_string)
+    #     define_method(method) do |*args, &block|
+    #       return nil if to.nil?
+    #       to.send(method, *args, &block)
+    #     end
+    #   end
+    # end
 
     # Given a word with dashes, returns a camel cased version of it.
     #

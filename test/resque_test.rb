@@ -2,19 +2,20 @@ require File.dirname(__FILE__) + '/test_helper'
 
 context "Resque" do
   setup do
-    Resque.redis.flushall
+    Resque.data_store.flush
 
     Resque.push(:people, { 'name' => 'chris' })
     Resque.push(:people, { 'name' => 'bob' })
     Resque.push(:people, { 'name' => 'mark' })
   end
   
-  test "can set a namespace through a url-like string" do
-    assert Resque.redis
-    assert_equal :resque, Resque.redis.namespace
-    Resque.redis = 'localhost:9736/namespace'
-    assert_equal 'namespace', Resque.redis.namespace
-  end
+  # TODO: Move this to tests for Resque::DataStore::Redis test
+  # test "can set a namespace through a url-like string" do
+  #   assert Resque.data_store
+  #   assert_equal :resque, Resque.data_store.namespace
+  #   Resque.data_store = 'localhost:9736/namespace'
+  #   assert_equal 'namespace', Resque.data_store.namespace
+  # end
 
   test "can put jobs on a queue" do
     assert Resque::Job.create(:jobs, 'SomeJob', 20, '/tmp')
@@ -173,7 +174,7 @@ context "Resque" do
   end
 
   test "queues are always a list" do
-    Resque.redis.flushall
+    Resque.data_store.flush
     assert_equal [], Resque.queues
   end
 
@@ -185,9 +186,10 @@ context "Resque" do
     assert_equal nil, Resque.pop(:people)
   end
 
-  test "keeps track of resque keys" do
-    assert_equal ["queue:people", "queues"], Resque.keys
-  end
+  # I cannot find where Resque.keys is ever used other than this test
+  # test "keeps track of resque keys" do
+  #   assert_equal ["queue:people", "queues"], Resque.keys
+  # end
 
   test "badly wants a class name, too" do
     assert_raises Resque::NoClassError do
@@ -223,10 +225,11 @@ context "Resque" do
     assert_equal 3, stats[:queues]
     assert_equal 3, stats[:processed]
     assert_equal 1, stats[:failed]
-    assert_equal [Resque.redis.respond_to?(:server) ? 'localhost:9736' : 'redis://localhost:9736/0'], stats[:servers]
+    assert_equal [Resque.data_store.respond_to?(:server) ? 'localhost:9736' : 'data_store://localhost:9736/0'], stats[:servers]
   end
 
-  test "decode bad json" do
-    assert_nil Resque.decode("{\"error\":\"Module not found \\u002\"}")
-  end
+  # TODO: Should be moved to Resque::DataStore::Base tests
+  # test "decode bad json" do
+  #   assert_nil Resque.decode("{\"error\":\"Module not found \\u002\"}")
+  # end
 end
