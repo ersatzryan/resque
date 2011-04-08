@@ -52,7 +52,7 @@ module Resque
     # Removes a stat from Redis, effectively setting it to 0.
     def clear(stat)
       # redis.del("stat:#{stat}")
-      Resque.data_store.clear(stat)
+      Resque.data_store.clear_stat(stat)
     end
   end
 end

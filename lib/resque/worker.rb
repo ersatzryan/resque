@@ -367,12 +367,13 @@ module Resque
         job.fail(DirtyExit.new)
       end
 
-      redis.srem(:workers, self)
-      redis.del("worker:#{self}")
-      redis.del("worker:#{self}:started")
+      Resque.data_store.unregister_worker(self)
+      # redis.srem(:workers, self)
+      # redis.del("worker:#{self}")
+      # redis.del("worker:#{self}:started")
 
-      Stat.clear("processed:#{self}")
-      Stat.clear("failed:#{self}")
+      # Stat.clear("processed:#{self}")
+      # Stat.clear("failed:#{self}")
     end
 
     # Given a job, tells Redis we're working on it. Useful for seeing
@@ -432,7 +433,8 @@ module Resque
 
     # Returns a hash explaining the Job we're currently processing, if any.
     def job
-      decode(redis.get("worker:#{self}")) || {}
+      Resque.data_store.worker_payload(self)
+      # decode(redis.get("worker:#{self}")) || {}
     end
     alias_method :processing, :job
 

@@ -108,6 +108,10 @@ module Resque
         @redis.get("stat:#{stat}").to_i
       end
 
+      def clear_stat(stat)
+        @redis.del("stat:#{stat}")
+      end
+
       def increment_by(stat, by = 1)
         @redis.incrby("stat:#{stat}", by)
       end
@@ -140,6 +144,19 @@ module Resque
 
       def start_worker(worker, string_time)
         @redis.set("worker:#{worker}:started", string_time)
+      end
+
+      def unregister_worker(worker)
+        @redis.srem(:workers, worker)
+        @redis.del("worker:#{worker}")
+        @redis.del("worker:#{worker}:started")
+
+        Stat.clear("processed:#{worker}")
+        Stat.clear("failed:#{worker}")
+      end
+
+      def worker_payload(worker)
+        decode(@redis.get("worker:#{worker}")) || {}
       end
 
       def worker_done(worker)
