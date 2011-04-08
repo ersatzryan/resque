@@ -11,20 +11,23 @@ module Resque
 
     # Returns the int value of a stat, given a string stat name.
     def get(stat)
-      redis.get("stat:#{stat}").to_i
+      # redis.get("stat:#{stat}").to_i
+      Resque.data_store.get_stat(stat).to_i
     end
 
     # Alias of `get`
-    def [](stat)
-      get(stat)
-    end
+    alias :[] :get
+    # def [](stat)
+    #   get(stat)
+    # end
 
     # For a string stat name, increments the stat by one.
     #
     # Can optionally accept a second int parameter. The stat is then
     # incremented by that amount.
     def incr(stat, by = 1)
-      redis.incrby("stat:#{stat}", by)
+      # redis.incrby("stat:#{stat}", by)
+      Resque.data_store.increment_by(stat, by)
     end
 
     # Increments a stat by one.
@@ -38,6 +41,7 @@ module Resque
     # decremented by that amount.
     def decr(stat, by = 1)
       redis.decrby("stat:#{stat}", by)
+      Resque.decrement_by(stat, by)
     end
 
     # Decrements a stat by one.
@@ -47,7 +51,8 @@ module Resque
 
     # Removes a stat from Redis, effectively setting it to 0.
     def clear(stat)
-      redis.del("stat:#{stat}")
+      # redis.del("stat:#{stat}")
+      Resque.data_store.clear(stat)
     end
   end
 end

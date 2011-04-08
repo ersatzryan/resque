@@ -225,7 +225,7 @@ context "Resque" do
     assert_equal 3, stats[:queues]
     assert_equal 3, stats[:processed]
     assert_equal 1, stats[:failed]
-    assert_equal [Resque.data_store.respond_to?(:server) ? 'localhost:9736' : 'data_store://localhost:9736/0'], stats[:servers]
+    assert_equal [Resque.data_store.respond_to?(:server) ? 'localhost:9736' : 'redis://localhost:9736/0'], stats[:servers]
   end
 
   # TODO: Should be moved to Resque::DataStore::Base tests

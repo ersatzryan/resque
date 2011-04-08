@@ -34,6 +34,10 @@ module Resque
         @redis.flushall
       end
 
+      def to_s
+        @redis.instance_variable_get(:@redis).id
+      end
+
       def push(queue, item)
         watch_queue(queue)
         @redis.rpush "queue:#{queue}", encode(item)
@@ -98,6 +102,56 @@ module Resque
         end
 
         destroyed
+      end
+
+      def get_stat(stat)
+        @redis.get("stat:#{stat}").to_i
+      end
+
+      def increment_by(stat, by = 1)
+        @redis.incrby("stat:#{stat}", by)
+      end
+
+      def workers(working_only = false)
+        workers = Array(@redis.smembers(:workers))
+
+        if working_only && !workers.empty?
+          workers.map! {|name| "worker:#{name}"}
+          workers = @redis.mapped_mget(*workers).reject {|key, value| value.nil? }.keys.map {|key| key.sub("worker:", '') }
+        end
+
+        workers.map {|id| find_worker(id)}.compact
+      end
+
+      def find_worker(worker_id)
+        queues = worker_queues(worker_id)
+        worker = Resque::Worker.new(*queues)
+        worker.to_s = worker_id
+        worker
+      end
+
+      def worker_queues(worker_id)
+        worker_id.split(":")[-1].split(',')
+      end
+
+      def add_worker(worker)
+        @redis.sadd(:workers, worker)
+      end
+
+      def start_worker(worker, string_time)
+        @redis.set("worker:#{worker}:started", string_time)
+      end
+
+      def worker_done(worker)
+        @redis.del("worker:#{worker}")
+      end
+
+      def worker_working_on(worker, data)
+        @redis.set("worker:#{worker}", encode(data))
+      end
+
+      def worker_exists?(worker_id)
+        @redis.sismember(:workers, worker_id)
       end
     end
   end

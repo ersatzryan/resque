@@ -24,35 +24,39 @@ module Resque
 
     # Returns an array of all worker objects.
     def self.all
-      Array(redis.smembers(:workers)).map { |id| find(id) }.compact
+      Resque.data_store.workers
     end
 
     # Returns an array of all worker objects currently processing
     # jobs.
     def self.working
-      names = all
-      return [] unless names.any?
+      Resque.data_store.workers(true)
+      # names = all
+      # return [] unless names.any?
 
-      names.map! { |name| "worker:#{name}" }
+      # names.map! { |name| "worker:#{name}" }
 
-      reportedly_working = redis.mapped_mget(*names).reject do |key, value|
-        value.nil?
-      end
-      reportedly_working.keys.map do |key|
-        find key.sub("worker:", '')
-      end.compact
+      # reportedly_working = redis.mapped_mget(*names).reject do |key, value|
+      #   value.nil?
+      # end
+      # reportedly_working.keys.map do |key|
+      #   find key.sub("worker:", '')
+      # end.compact
     end
 
     # Returns a single worker object. Accepts a string id.
     def self.find(worker_id)
-      if exists? worker_id
-        queues = worker_id.split(':')[-1].split(',')
-        worker = new(*queues)
-        worker.to_s = worker_id
-        worker
-      else
-        nil
-      end
+      return nil unless exists? worker_id
+
+      Resque.data_store.find_worker(worker_id)
+      # if exists? worker_id
+      #   queues = worker_id.split(':')[-1].split(',')
+      #   worker = new(*queues)
+      #   worker.to_s = worker_id
+      #   worker
+      # else
+      #   nil
+      # end
     end
 
     # Alias of `find`
@@ -63,7 +67,8 @@ module Resque
     # Given a string worker id, return a boolean indicating whether the
     # worker exists
     def self.exists?(worker_id)
-      redis.sismember(:workers, worker_id)
+      # redis.sismember(:workers, worker_id)
+      Resque.data_store.worker_exists?(worker_id)
     end
 
     # Workers should be initialized with an array of string queue
@@ -335,7 +340,8 @@ module Resque
     # Registers ourself as a worker. Useful when entering the worker
     # lifecycle on startup.
     def register_worker
-      redis.sadd(:workers, self)
+      # redis.sadd(:workers, self)
+      Resque.data_store.add_worker(self)
       started!
     end
 
@@ -372,19 +378,23 @@ module Resque
     # Given a job, tells Redis we're working on it. Useful for seeing
     # what workers are doing and when.
     def working_on(job)
-      job.worker = self
-      data = encode \
-        :queue   => job.queue,
-        :run_at  => Time.now.to_s,
-        :payload => job.payload
-      redis.set("worker:#{self}", data)
+      # job.worker = self
+      # data = encode \
+      #   :queue   => job.queue,
+      #   :run_at  => Time.now.to_s,
+      #   :payload => job.payload
+      # redis.set("worker:#{self}", data)
+      
+      data = { :queue => job.queue, :run_at => Time.now.to_s, :payload => job.payload }
+      Resque.data_store.worker_working_on(self, data) 
     end
 
     # Called when we are done working - clears our `working_on` state
     # and tells Redis we processed a job.
     def done_working
       processed!
-      redis.del("worker:#{self}")
+      # redis.del("worker:#{self}")
+      Resque.data_store.worker_done(self)
     end
 
     # How many jobs has this worker processed? Returns an int.
@@ -416,7 +426,8 @@ module Resque
 
     # Tell Redis we've started
     def started!
-      redis.set("worker:#{self}:started", Time.now.to_s)
+      Resque.data_store.start_worker(self, Time.now.to_s)
+      # redis.set("worker:#{self}:started", Time.now.to_s)
     end
 
     # Returns a hash explaining the Job we're currently processing, if any.
