@@ -114,7 +114,7 @@ module Resque
     # Also accepts a block which will be passed the job as soon as it
     # has completed processing. Useful for testing.
     def work(interval = 5, &block)
-      $0 = "resque: Starting"
+      procline "resque: Starting"
       startup
 
       loop do
@@ -422,7 +422,8 @@ module Resque
 
     # What time did this worker start? Returns an instance of `Time`
     def started
-      redis.get "worker:#{self}:started"
+      # redis.get "worker:#{self}:started"
+      Resque.data_store.worker_started_at(self)
     end
 
     # Tell Redis we've started
@@ -451,7 +452,8 @@ module Resque
     # Returns a symbol representing the current worker state,
     # which can be either :working or :idle
     def state
-      redis.exists("worker:#{self}") ? :working : :idle
+      # redis.exists("worker:#{self}") ? :working : :idle
+      Resque.data_store.worker_state(self)
     end
 
     # Is this worker the same as another worker?
@@ -492,8 +494,8 @@ module Resque
     # Procline is always in the format of:
     #   resque-VERSION: STRING
     def procline(string)
-      $0 = "resque-#{Resque::Version}: #{string}"
-      log! $0
+      $PROGRAM_NAME = "resque-#{Resque::Version}: #{string}"
+      log! $PROGRAM_NAME
     end
 
     # Log a message to STDOUT if we are verbose or very_verbose.

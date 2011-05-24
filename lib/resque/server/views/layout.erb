@@ -16,11 +16,6 @@
         <%= tab tab_name %>
       <% end %>
     </ul>
-    <% if Resque.redis.namespace != :resque %>
-      <abbr class="namespace" title="Resque's Redis Namespace">
-       <%= Resque.redis.namespace %>
-      </abbr>
-    <% end %>
   </div>
 
   <% if @subtabs %>
@@ -37,7 +32,7 @@
 
 <div id="footer">
   <p>Powered by <a href="http://github.com/defunkt/resque">Resque</a> v<%=Resque::Version%></p>
-  <p>Connected to Redis namespace <%= Resque.redis.namespace %> on <%=Resque.redis_id%></p>
+  <p>Connected to <%= Resque.data_store.class %> on <%= Resque.data_store.to_s %></p>
 </div>
 
 </body>

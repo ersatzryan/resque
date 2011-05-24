@@ -46,34 +46,36 @@ module Resque
         Resque::Server.tabs
       end
 
-      def redis_get_size(key)
-        case Resque.redis.type(key)
-        when 'none'
-          []
-        when 'list'
-          Resque.redis.llen(key)
-        when 'set'
-          Resque.redis.scard(key)
-        when 'string'
-          Resque.redis.get(key).length
-        when 'zset'
-          Resque.redis.zcard(key)
-        end
+      def get_size_of(key)
+        # case Resque.redis.type(key)
+        # when 'none'
+        #   []
+        # when 'list'
+        #   Resque.redis.llen(key)
+        # when 'set'
+        #   Resque.redis.scard(key)
+        # when 'string'
+        #   Resque.redis.get(key).length
+        # when 'zset'
+        #   Resque.redis.zcard(key)
+        # end
+        Resque.data_store.get_size_of(key)
       end
 
-      def redis_get_value_as_array(key, start=0)
-        case Resque.redis.type(key)
-        when 'none'
-          []
-        when 'list'
-          Resque.redis.lrange(key, start, start + 20)
-        when 'set'
-          Resque.redis.smembers(key)[start..(start + 20)]
-        when 'string'
-          [Resque.redis.get(key)]
-        when 'zset'
-          Resque.redis.zrange(key, start, start + 20)
-        end
+      def get_value_as_array(key, start=0)
+        # case Resque.redis.type(key)
+        # when 'none'
+        #   []
+        # when 'list'
+        #   Resque.redis.lrange(key, start, start + 20)
+        # when 'set'
+        #   Resque.redis.smembers(key)[start..(start + 20)]
+        # when 'string'
+        #   [Resque.redis.get(key)]
+        # when 'zset'
+        #   Resque.redis.zrange(key, start, start + 20)
+        # end
+        Array( Resque.data_store.get_value(key, start) )
       end
 
       def show_args(args)

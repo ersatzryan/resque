@@ -1,14 +1,14 @@
-<% @subtabs = %w( resque redis keys ) %>
+<% @subtabs = %w( resque store keys ) %>
 
 <% if params[:key] %>
 
-<%= partial resque.redis.type(params[:key]).eql?("string") ? :key_string : :key_sets %>
+<%= partial :key_sets %>
 
 <% elsif params[:id] == "resque" %>
 
   <h1><%= resque %></h1>
   <table class='stats'>
-  <% for key, value in resque.info.to_a.sort_by { |i| i[0].to_s } %>
+  <% resque.info.to_a.sort_by { |i| i[0].to_s }.each do |key, value| %>
     <tr>
       <th>
         <%= key %>
@@ -20,11 +20,11 @@
   <% end %>
   </table>
 
-<% elsif params[:id] == 'redis' %>
+<% elsif params[:id] == 'store' %>
 
-  <h1><%= resque.redis_id %></h1>
+  <h1><%= resque.data_store %></h1>
   <table class='stats'>
-  <% for key, value in resque.redis.info.to_a.sort_by { |i| i[0].to_s } %>
+  <% resque.info.to_a.sort_by { |i| i[0].to_s }.each do |key, value| %>
     <tr>
       <th>
         <%= key %>
@@ -39,20 +39,17 @@
 <% elsif params[:id] == 'keys' %>
 
   <h1>Keys owned by <%= resque %></h1>
-  <p class='sub'>(All keys are actually prefixed with "<%= Resque.redis.namespace %>:")</p>
   <table class='stats'>
     <tr>
       <th>key</th>
-      <th>type</th>
       <th>size</th>
     </tr>
-  <% for key in resque.keys.sort %>
+  <% resque.keys.sort.each do |key| %>
     <tr>
       <th>
         <a href="<%=u "/stats/keys/#{key}" %>"><%= key %></a>
       </th>
-      <td><%= resque.redis.type key %></td>
-      <td><%= redis_get_size key %></td>
+      <td><%= get_size_of key %></td>
     </tr>
   <% end %>
   </table>

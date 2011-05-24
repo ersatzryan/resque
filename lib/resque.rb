@@ -94,7 +94,7 @@ module Resque
   end
 
   def to_s
-    "Resque Client connected to #{redis_id}"
+    "Resque Client connected to #{data_store}"
   end
 
 
@@ -130,13 +130,8 @@ module Resque
   # To get the 3rd page of a 30 item, paginatied list one would use:
   #   Resque.peek('my_list', 59, 30)
   def peek(queue, start = 0, count = 1)
-    list_range("queue:#{queue}", start, count)
-  end
-
-  # Does the dirty work of fetching a range of items from a Redis list
-  # and converting them into Ruby objects.
-  def list_range(key, start = 0, count = 1)
-    data_store.list_range(key, start, count)
+    data_store.peek(queue, start, count)
+    # list_range("queue:#{queue}", start, count)
   end
 
   # Returns an array of all known Resque queues as strings.
@@ -263,9 +258,10 @@ module Resque
   #
   # Returns an array of all known Resque keys in Redis. Redis' KEYS operation
   # is O(N) for the keyspace, so be careful - this can be slow for big databases.
-  # def keys
-  #   redis.keys("*").map do |key|
-  #     key.sub("#{redis.namespace}:", '')
-  #   end
-  # end
+  def keys
+    # redis.keys("*").map do |key|
+    #   key.sub("#{redis.namespace}:", '')
+    # end
+    data_store.collections
+  end
 end

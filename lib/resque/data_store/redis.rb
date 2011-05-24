@@ -73,6 +73,9 @@ module Resque
         @redis.llen("queue:#{queue}").to_i
       end
 
+      def peek(queue, start = 0, count = 1)
+        list_range("queue:#{queue}", start, count)
+      end
       # Does the dirty work of fetching a range of items from a Redis list
       # and converting them into Ruby objects.
       def list_range(key, start = 0, count = 1)
@@ -167,9 +170,70 @@ module Resque
         @redis.set("worker:#{worker}", encode(data))
       end
 
+      def worker_started_at(worker)
+        @redis.get("worker:#{worker}:started")
+      end
+
+      def worker_state(worker)
+        @redis.exists("worker:#{worker}") ? :working : :idle
+      end
+
       def worker_exists?(worker_id)
         @redis.sismember(:workers, worker_id)
       end
+
+      def add_failure(data)
+        @redis.rpush(:failed, encode(data))
+      end
+
+      def count_failures
+        @redis.llen(:failed).to_i
+      end
+
+      def failures(start = 0, count = 1)
+        list_range(:failed, start, count)
+      end
+
+      def clear_failures
+        @redis.del(:failed)
+      end
+
+      def get_size_of(key)
+        case @redis.type(key)
+        when 'none'
+          []
+        when 'list'
+          @redis.llen(key)
+        when 'set'
+          @redis.scard(key)
+        when 'string'
+          @redis.get(key).length
+        when 'zset'
+          @redis.zcard(key)
+        end
+      end
+
+      def get_value(key, start=0)
+        case @redis.type(key)
+        when 'none'
+          []
+        when 'list'
+          @redis.lrange(key, start, start + 20)
+        when 'set'
+          @redis.smembers(key)[start..(start + 20)]
+        when 'string'
+          @redis.get(key)
+        when 'zset'
+          @redis.zrange(key, start, start + 20)
+        end
+      end
+
+      def collections
+        @redis.keys("*").map do |key|
+          key.sub("#{@redis.namespace}:", '')
+        end
+      end
+
     end
   end
 end
